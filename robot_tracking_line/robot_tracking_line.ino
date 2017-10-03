@@ -152,6 +152,11 @@ void saved_state() {
   old_left = SL == HIGH;
   old_right = SR == HIGH;
 }
+void reset_state() {
+  old_middle = null;
+  old_left = null;
+  old_right = null;
+}
 
 void setup() 
 {
@@ -192,6 +197,7 @@ void loop()
       }
       
       if (FIRST_SENSOR != 0) {
+        reset_state();
         if (FIRST_SENSOR < 0) {
           turnL();
         } else if (FIRST_SENSOR > 0) {
