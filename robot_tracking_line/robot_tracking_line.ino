@@ -165,10 +165,15 @@ void setup()
 }
 int elasped = 0;
 int elasped_lineout = 0;
-const int DELAY = 50;
-const int DELAY_OUT_LINE = 300; 
+int elasped_turn = 0;
 
-const bool TURN_BACK = false;
+const int DELAY = 0;
+const int DELAY_OUT_LINE = 1000; 
+
+
+bool TURN_BACK = false;
+
+int FIRST_SENSOR = 0;
 void loop()
 {
   Sensor_Scan();
@@ -176,21 +181,50 @@ void loop()
   bool middle = SM == HIGH;
   bool left = SL == HIGH;
   bool right = SR == HIGH;
+  
   if (current - elasped > DELAY) {
-    if (!middle && !left && !right) {
-      int elasped_line = millis();
+    Serial.println((String)"back " + SL + " " +SM + " " + SR);
+    if (TURN_BACK) {
+      if (FIRST_SENSOR == 0) {
+        if (right) FIRST_SENSOR = 1;
+        if (left) FIRST_SENSOR = -1;
+      }
+      Serial.print("sensor after turnback is ");
+      Serial.println(FIRST_SENSOR == 1 ? "right" : "left");
       
+      if (FIRST_SENSOR != 0) {
+        if (FIRST_SENSOR < 0) {
+          turnL();
+        } else if (FIRST_SENSOR > 0) {
+          turnR();
+        }
+        int time_turn = millis();
+        if (elasped_turn == 0 ) elasped_turn = millis();
+        if (time_turn - elasped_turn > 1000) {
+          advance();
+          TURN_BACK = false;
+          elasped_turn = 0;
+        }
+      } else {
+        back();
+      }
+    } else if (!middle && !left && !right) {
+      int elasped_line = millis();
+      if (elasped_lineout == 0 ) elasped_lineout = millis();
       if (elasped_line - elasped_lineout < DELAY_OUT_LINE) {
-        if (!old_left) {
+        if (old_left) {
           Serial.println("turn left. old state");
-          leftside();
+          rightside();
         } else if (!old_right) {
           Serial.println("turn right. old state");
-          rightside();
+          leftside();
         } else {
-          Serial.println("back. old state");
-          back();
-        } 
+          Serial.println("Unknow state");
+//          stopp();
+          elasped_lineout = 0;
+          TURN_BACK = true;
+        }
+        elasped_lineout = millis();
       } else {
         TURN_BACK = true;
       }
@@ -198,11 +232,11 @@ void loop()
       Serial.println("forward.");
       advance();
       saved_state();
-    } else if (!left) {
+    } else if (left) {
       Serial.println("right slide.");
       rightside();
       saved_state();
-    } else if (!right) {
+    } else if (right) {
       Serial.println("left slide.");
       leftside();
       saved_state();
@@ -210,7 +244,7 @@ void loop()
     
     elasped = millis();
   }
-  delay(10);
+//  delay(10);
 //    digitalWrite(pinRB,LOW);
 //    digitalWrite(pinRF,HIGH);
 //    digitalWrite(pinLB,LOW);
