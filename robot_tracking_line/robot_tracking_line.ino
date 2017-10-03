@@ -200,7 +200,7 @@ void loop()
         }
         int time_turn = millis();
         if (elasped_turn == 0 ) elasped_turn = millis();
-        if (time_turn - elasped_turn > 1000) {
+        if (time_turn - elasped_turn > 50) {
           advance();
           TURN_BACK = false;
           elasped_turn = 0;
