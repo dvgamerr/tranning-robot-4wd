@@ -166,9 +166,12 @@ void setup()
 int elasped = 0;
 int elasped_lineout = 0;
 int elasped_turn = 0;
+int elasped_back = 0;
 
-const int DELAY = 5;
-const int DELAY_OUT_LINE = 100; 
+const int DELAY = 0;
+const int DELAY_OUT_LINE = 80; 
+const int DELAY_ROTATE = 20; 
+const int DELAY_BACK = 40; 
 
 bool TURN_BACK = false;
 
@@ -182,7 +185,6 @@ void loop()
   bool right = SR == HIGH;
   
   if (current - elasped > DELAY) {
-    Serial.println((String)"back " + SL + " " +SM + " " + SR);
     if (TURN_BACK) {
       if (FIRST_SENSOR == 0) {
         if (right) FIRST_SENSOR = 1;
@@ -197,14 +199,21 @@ void loop()
         }
         int time_turn = millis();
         if (elasped_turn == 0 ) elasped_turn = millis();
-        if (time_turn - elasped_turn > 50) {
+        if (time_turn - elasped_turn > DELAY_ROTATE) {
+          Serial.println((String)"TURN_BACK: " + (time_turn - elasped_turn));
           advance();
           FIRST_SENSOR = 0;
           TURN_BACK = false;
           elasped_turn = 0;
         }
       } else {
-        back();
+        if (old_left) {
+          turnL();
+        } else if (old_right) {
+          turnR();
+        } else {
+          back();
+        }
       }
     } else if (!middle && !left && !right) {
       int elasped_line = millis();
@@ -240,66 +249,5 @@ void loop()
     
     elasped = millis();
   }
-//  delay(10);
-//    digitalWrite(pinRB,LOW);
-//    digitalWrite(pinRF,HIGH);
-//    digitalWrite(pinLB,LOW);
-//    digitalWrite(pinLF,HIGH);
-//    Set_Speed(Lpwm_val,Rpwm_val);
-//    Car_state = 1;
-//    show_state();
-//  } else if (left) {
-//    digitalWrite(pinRB,LOW);
-//    digitalWrite(pinRF,HIGH);
-//    digitalWrite(pinLB,LOW);
-//    digitalWrite(pinLF,HIGH);
-//    Set_Speed(Lpwm_val - 50, Rpwm_val);
-//    Car_state = 3;
-//    show_state();
-//  } else if (right) {
-//    digitalWrite(pinRB,LOW);
-//    digitalWrite(pinRF,HIGH);
-//    digitalWrite(pinLB,LOW);
-//    digitalWrite(pinLF,HIGH);
-//    Set_Speed(Lpwm_val,Rpwm_val - 50);
-//    Car_state = 4;
-//    show_state();
-//  } else {
-//    stopp();    
-//  }
-  
 }
 
-// if (SM == HIGH)// middle sensor in black area
-//{
-//if (SL == LOW & SR == HIGH) // black on left, white on right, turn left
-//{
-//turnR();
-//}
-//else if (SR == LOW & SL == HIGH) // white on left, black on right, turn right
-//{
-//turnL();
-//}
-//else // white on both sides, going forward
-//{
-//advance();
-//}
-//}
-//else // middle sensor on white area
-//{
-//if (SL== LOW & SR == HIGH)// black on left, white on right, turn left
-//{
-//turnR();
-//}
-//else if (SR == LOW & SL == HIGH) // white on left, black on right, turn right
-//{
-//turnL();
-//}
-//else // all white, stop
-//{
-//back();
-//delay(100);
-//stopp() ; 
-//}
-//}
-//} 
