@@ -167,9 +167,8 @@ int elasped = 0;
 int elasped_lineout = 0;
 int elasped_turn = 0;
 
-const int DELAY = 0;
-const int DELAY_OUT_LINE = 1000; 
-
+const int DELAY = 5;
+const int DELAY_OUT_LINE = 100; 
 
 bool TURN_BACK = false;
 
@@ -189,8 +188,6 @@ void loop()
         if (right) FIRST_SENSOR = 1;
         if (left) FIRST_SENSOR = -1;
       }
-      Serial.print("sensor after turnback is ");
-      Serial.println(FIRST_SENSOR == 1 ? "right" : "left");
       
       if (FIRST_SENSOR != 0) {
         if (FIRST_SENSOR < 0) {
@@ -202,6 +199,7 @@ void loop()
         if (elasped_turn == 0 ) elasped_turn = millis();
         if (time_turn - elasped_turn > 50) {
           advance();
+          FIRST_SENSOR = 0;
           TURN_BACK = false;
           elasped_turn = 0;
         }
@@ -219,13 +217,11 @@ void loop()
           Serial.println("turn right. old state");
           leftside();
         } else {
-          Serial.println("Unknow state");
-//          stopp();
           elasped_lineout = 0;
           TURN_BACK = true;
         }
-        elasped_lineout = millis();
       } else {
+        elasped_lineout = 0;
         TURN_BACK = true;
       }
     } else if (left && right) {
