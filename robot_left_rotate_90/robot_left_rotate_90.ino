@@ -44,7 +44,8 @@ byte FORWARD = 2;
 byte LEFT = 3;
 byte RIGHT = 4;
 
-byte SENSOR_SATE = IDIE;
+byte SENSOR_STATE = FORWARD;
+byte SENSOR_LAST = IDIE;
 
 int COUNT_SENSOR = 0;
 int LOOP_STEP = 0;
@@ -201,8 +202,14 @@ void saved_state() {
   old_left = SL == HIGH;
   old_right = SR == HIGH;
 }
-
+void setSensorState(int state) {
+  SENSOR_LAST = SENSOR_STATE;
+  SENSOR_STATE = state;
+}
 int LAP = 0;
+
+bool sensor_middle = false;
+bool toggle_middle = false;
 void loop()
 {
   Sensor_Scan();
@@ -213,21 +220,26 @@ void loop()
   bool right = SL == HIGH;
 
   if (sensor_milis - elasped_sensor > DELAY) {
-    if (SENSOR_SATE == IDIE) {
+    if (SENSOR_STATE == IDIE) {
       stopp();
-    } else if (SENSOR_SATE == LEFT) {
+    } else if (SENSOR_STATE == LEFT) {
+      Serial.println((String)"TURN LEFT -- SL:" +left + " SM:" + middle + " SR:" + right);
       long elasped_rotate = millis();
       if (rotate_begin == 0) rotate_begin = millis();
-      if (elasped_rotate - rotate_begin <= DELAY_TURN_LEFT) {
+      if (elasped_rotate - rotate_begin <= DELAY_TURN_LEFT && !(!left && right)) {
         turnR();
       } else {
         COUNT_SENSOR = 0;
         rotate_begin = 0;
-        SENSOR_SATE = FORWARD;
+        setSensorState(FORWARD);
       }
-    } else if (SENSOR_SATE == FORWARD) {
+    } else if (SENSOR_STATE == FORWARD) {
       if (!left && !middle && !right) {
-         stopp(); 
+        if (SENSOR_LAST == LEFT && COUNT_SENSOR == 1) {
+          setSensorState(LEFT);
+        } else if (SENSOR_LAST == LEFT && COUNT_SENSOR == 0) {
+          rightside();
+        }
       } else if (!middle && !right) {
         rightside();
       } else if (middle ) {
@@ -243,8 +255,11 @@ void loop()
       if (left && !tag_sensor) {
         COUNT_SENSOR++;
         tag_sensor = true;
-        if (COUNT_SENSOR == 3) {
-          TURN_LEFT = true;
+        if (COUNT_SENSOR == MISSION[LAP]) {
+          setSensorState(LEFT);
+          LAP++;
+          Serial.println((String)"MISSION: " + (sizeof(MISSION) / 2) + " LAP: " + LAP);
+          if (sizeof(MISSION) / 2 > LAP) LAP = 0;
         }
       }
       if (!left) tag_sensor = false;
