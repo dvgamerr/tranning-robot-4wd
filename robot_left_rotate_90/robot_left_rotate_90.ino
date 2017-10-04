@@ -25,8 +25,8 @@ unsigned char SR;
 
 unsigned char old_left,old_middle,old_right;
 
-//int _STEP[6] = {"L3","L1","L1","L1"};
-int MISSION[4] = {3,1,1,1};
+//int _STEP[6] = {"L3","L2","L1","L1"};
+int MISSION[4] = {3,2,1,1};
 int elasped_sensor = 0;
 int elasped_lineout = 0;
 int elasped_turn = 0;
@@ -36,7 +36,13 @@ const int DELAY = 20;
 const int DELAY_OUT_LINE = 80; 
 const int DELAY_ROTATE = 20; 
 const int DELAY_BACK = 40; 
-const int DELAY_TURN_LEFT = 900;
+const int DELAY_TURN_LEFT = 950;
+
+//const int DELAY = 0;
+//const int DELAY_OUT_LINE = 25; 
+//const int DELAY_ROTATE = 8; 
+//const int DELAY_BACK = 10; 
+//const int DELAY_TURN_LEFT = 300;
 
 byte IDIE = 0;
 byte BACK = 1;
@@ -44,7 +50,7 @@ byte FORWARD = 2;
 byte LEFT = 3;
 byte RIGHT = 4;
 
-byte SENSOR_STATE = FORWARD;
+byte SENSOR_STATE = IDIE;
 byte SENSOR_LAST = IDIE;
 
 int COUNT_SENSOR = 0;
@@ -60,17 +66,7 @@ void Sensor_Scan(void)
   SR = digitalRead(SensorRight);
 
   lcd.setCursor(0,0);
-  lcd.print("L:");
-  lcd.setCursor(2,0);
-  lcd.print(SL);
-  lcd.setCursor(4,0);
-  lcd.print("- M:");
-  lcd.setCursor(8,0);
-  lcd.print(SM);
-  lcd.setCursor(10,0);
-  lcd.print("- R:");
-  lcd.setCursor(14,0);
-  lcd.print(SR);
+  lcd.print((String)SL+":"+SM+":"+SR+" - "+SENSOR_LAST+"->"+SENSOR_STATE);
 }
 
 
@@ -208,6 +204,7 @@ void setSensorState(int state) {
 }
 int LAP = 0;
 
+bool LOOP_TWO = false;
 bool sensor_middle = false;
 bool toggle_middle = false;
 void loop()
@@ -222,50 +219,54 @@ void loop()
   if (sensor_milis - elasped_sensor > DELAY) {
     if (SENSOR_STATE == IDIE) {
       stopp();
+      if (left || middle || right) setSensorState(FORWARD);
     } else if (SENSOR_STATE == LEFT) {
       Serial.println((String)"TURN LEFT -- SL:" +left + " SM:" + middle + " SR:" + right);
       long elasped_rotate = millis();
       if (rotate_begin == 0) rotate_begin = millis();
-      if (elasped_rotate - rotate_begin <= DELAY_TURN_LEFT && !(!left && right)) {
+      if (elasped_rotate - rotate_begin <= DELAY_TURN_LEFT && !(middle && right & LOOP_TWO)) {
         turnR();
       } else {
+        LOOP_TWO = false;
         COUNT_SENSOR = 0;
         rotate_begin = 0;
         setSensorState(FORWARD);
       }
     } else if (SENSOR_STATE == FORWARD) {
       if (!left && !middle && !right) {
-        if (SENSOR_LAST == LEFT && COUNT_SENSOR == 1) {
-          setSensorState(LEFT);
-        } else if (SENSOR_LAST == LEFT && COUNT_SENSOR == 0) {
+        if (SENSOR_LAST == LEFT && old_right) {
           rightside();
+        } else if (SENSOR_LAST == LEFT && old_left && COUNT_SENSOR == 1) {
+          setSensorState(LEFT);
+          COUNT_SENSOR = 0;
+          LOOP_TWO = true;
         }
-      } else if (!middle && !right) {
+      } else if (!middle || !right) {
+        Serial.println("forward.");
         rightside();
-      } else if (middle ) {
+        saved_state();
+      } else if (middle) {
         Serial.println("forward.");
         leftside();
         saved_state();
-      } else if (!middle) {
-        Serial.println("right slide.");
-        rightside();
+      } else {
+        advance();
         saved_state();
       }
       
-      if (left && !tag_sensor) {
+      if (left && !tag_sensor && !LOOP_TWO) {
         COUNT_SENSOR++;
         tag_sensor = true;
         if (COUNT_SENSOR == MISSION[LAP]) {
           setSensorState(LEFT);
           LAP++;
-          Serial.println((String)"MISSION: " + (sizeof(MISSION) / 2) + " LAP: " + LAP);
-          if (sizeof(MISSION) / 2 > LAP) LAP = 0;
+          if (sizeof(MISSION) / 2 <= LAP) LAP = 0;
         }
       }
       if (!left) tag_sensor = false;
-      lcd.setCursor(0, 1); //showing from second row
-      lcd.print((String)"LEFT: " + COUNT_SENSOR);
     }
+    lcd.setCursor(0, 1); //showing from second row
+    lcd.print((String)" M:"+ (LAP+1) + " LAP:" + COUNT_SENSOR + "/" + MISSION[LAP]);
     elasped_sensor = millis();
   }
 }
