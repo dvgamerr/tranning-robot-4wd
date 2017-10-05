@@ -25,7 +25,7 @@ unsigned char SR;
 
 unsigned char old_left,old_middle,old_right;
 
-//int _STEP[6] = {"L3","L2","L1","L1"};
+char* raw = "L3-L2-L1-L1";
 int MISSION[4] = {3,2,1,1};
 int elasped_sensor = 0;
 int elasped_lineout = 0;
