@@ -1,259 +1,157 @@
-#include <LiquidCrystal_I2C.h> 
-#include <Wire.h> 
-#define SensorLeft    6   //input pin of left sensor
-#define SensorMiddle  5   //input pin of middle sensor
-#define SensorRight   4   //input pin of right sensor
-unsigned char SL;        //state of left sensor
-unsigned char SM;        //state of middle sensor
-unsigned char SR;        //state of right sensor
-#define Lpwm_pin  13     //pin of controlling speed---- ENA of motor driver board
-#define Rpwm_pin  3    //pin of controlling speed---- ENA of motor driver board
-int pinLB=7;            //pin of controlling diversion----IN1 of motor driver board
-int pinLF=8;            //pin of controlling diversion----IN2 of motor driver board
-int pinRB=10;            //pin of controlling diversion----IN3 of motor driver board
-int pinRF=9;            //pin of controlling diversion----IN4 of motor driver board
-unsigned char Lpwm_val = 130;//the speed of left wheel at 180 in initialization
-unsigned char Rpwm_val = 250;//the speed of right wheel at 180 in initialization
-int Car_state=0;             //state of car moving
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 
-LiquidCrystal_I2C lcd(0x27,16,2);
-void LCD1602_init(void)
-{
-  lcd.init();                     
-  lcd.backlight(); 
-  lcd.clear();  
-}
-void Sensor_IO_Config()
-{
-  pinMode(SensorLeft,INPUT);
-  pinMode(SensorMiddle,INPUT);
-  pinMode(SensorRight,INPUT);
-}
-void Sensor_Scan(void)
-{
-  SL = digitalRead(SensorLeft);
-  SM = digitalRead(SensorMiddle);
-  SR = digitalRead(SensorRight);
+#define pinEcho   A3
+#define pinTriger A2
+#define pinServo  3
 
-  lcd.setCursor(0,0);
-  lcd.print("L:");
-  lcd.setCursor(2,0);
-  lcd.print(SL);
-  lcd.setCursor(4,0);
-  lcd.print("- M:");
-  lcd.setCursor(8,0);
-  lcd.print(SM);
-  lcd.setCursor(10,0);
-  lcd.print("- R:");
-  lcd.setCursor(14,0);
-  lcd.print(SR);
-}
-void M_Control_IO_config(void)//initialized function of IO of motor driver
-{
-  pinMode(pinLB,OUTPUT); // pin 2--IN1 of motor driver board
-  pinMode(pinLF,OUTPUT); // pin 4--IN2 of motor driver board
-  pinMode(pinRB,OUTPUT); // pin 7--IN3 of motor driver board
-  pinMode(pinRF,OUTPUT); // pin 8--IN4 of motor driver board
-  pinMode(Lpwm_pin,OUTPUT); // pin 5  (PWM) --ENA of motor driver board
-  pinMode(Rpwm_pin,OUTPUT); // pin 10 (PWM) --ENB of motor driver board  
-}
-void Set_Speed(unsigned char Left,unsigned char Right)//setting function of speed
-{
-  analogWrite(Lpwm_pin,Left);   
-  analogWrite(Rpwm_pin,Right);
-}
-void advance()     // going forwards
-{
-   digitalWrite(pinRB,HIGH);  // making motor move towards right rear
-   digitalWrite(pinRF,LOW);
-   digitalWrite(pinLB,HIGH);  //  making motor move towards left rear
-   digitalWrite(pinLF,LOW); 
-   Car_state = 1; 
-   show_state();   
-}
-void turnR()        //turning on the right(dual wheels)
-    {
-     digitalWrite(pinRB,HIGH);  //making motor move towards right rear
-     digitalWrite(pinRF,LOW);
-     digitalWrite(pinLB,LOW);
-     digitalWrite(pinLF,HIGH);  //making motor move towards left front
-     Car_state = 4;
-     show_state();
-    }
-void turnL()        //turning on the left(dual wheels)
-    {
-     digitalWrite(pinRB,LOW);
-     digitalWrite(pinRF,HIGH);   //making motor move towards right front
-     digitalWrite(pinLB,HIGH);   //making motor move towards left rear
-     digitalWrite(pinLF,LOW);
-     Car_state = 3;
-     show_state();
-    }    
-void stopp()         //stop
-    {
-     digitalWrite(pinRB,HIGH);
-     digitalWrite(pinRF,HIGH);
-     digitalWrite(pinLB,HIGH);
-     digitalWrite(pinLF,HIGH);
-//     Car_state = 5;
-//     show_state();
-    }
-void back()          //back
-    {
-     digitalWrite(pinRB,LOW);  //making motor move towards right rear
-     digitalWrite(pinRF,HIGH);
-     digitalWrite(pinLB,LOW);  //making motor move towards left rear
-     digitalWrite(pinLF,HIGH);
-     Car_state = 2;
-     show_state() ;    
-    }
-void show_state(void)  //showing current state of the car
-{
-  lcd.setCursor(0, 1); //showing from second row
-   switch(Car_state)
-   {
-     case 1:lcd.print(" Go  ");
-     break;
-     case 2:lcd.print("Back ");
-     break;
-     case 3:lcd.print("Left ");
-     break;
-     case 4:lcd.print("Right");
-     break;
-     case 5:lcd.print("Stop "); 
-     break;
-     default:
-     break;
-   }
-}
-void leftside() {
-  digitalWrite(pinRB,HIGH);
-  digitalWrite(pinRF,LOW);
-  digitalWrite(pinLB,LOW);
-  digitalWrite(pinLF,LOW);
-  Set_Speed(Lpwm_val, Rpwm_val);
-  Car_state = 3;
-  show_state();
-}
+#define pinSL     A0
+#define pinSML    13
+#define pinSMM    12
+#define pinSMR    11
+#define pinSR     A1
 
-void rightside() {
-  digitalWrite(pinRB,LOW);
-  digitalWrite(pinRF,LOW);
-  digitalWrite(pinLB,HIGH);
-  digitalWrite(pinLF,LOW);
-  Set_Speed(Lpwm_val,Rpwm_val);
-  Car_state = 4;
-  show_state();
-}
+#define pinL_PWM  5
+#define pinR_PWM  6
 
-unsigned char old_left,old_middle,old_right;
-void saved_state() {
-  old_middle = SM == HIGH;
-  old_left = SL == HIGH;
-  old_right = SR == HIGH;
-}
-void reset_state() {
-  old_middle = null;
-  old_left = null;
-  old_right = null;
-}
+#define pinLB     4
+#define pinLF     2
+#define pinRB     7
+#define pinRF     8
 
-void setup() 
+unsigned char SPEED1 = 90;
+unsigned char SPEED2 = 100;
+unsigned char SPEED3 = 150;
+
+unsigned char LPWM = SPEED2;
+unsigned char RPWM = SPEED2;
+
+unsigned char SML, SMM, SMR, SL, SR;
+bool oSMM, oSML, oSMR, oSR, oSL;
+bool cSMM, cSML, cSMR, cSR, cSL;
+
+const byte STOP = 0;
+const byte BACK = 1;
+const byte FORWARD = 2;
+const byte SLIDE_LEFT = 3;
+const byte SLIDE_RIGHT = 4;
+const byte TURN_LEFT = 5;
+const byte TURN_RIGHT = 6;
+const byte UTURN_LEFT = 7;
+const byte UTURN_RIGHT = 8;
+
+byte SENSOR_STATE = STOP;
+byte SENSOR_LAST = STOP;
+
+#define DELAY           20
+#define DELAY_OUT_LINE  80
+#define DELAY_ROTATE    20
+#define DELAY_BACK      40
+#define DELAY_TURN_LEFT 950
+#define DELAY_SONIC     50
+#define RATE_SONIC      58.65
+#define SERVO_CENTOR    1880
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup()
 {
   Serial.begin(9600);
-  LCD1602_init();
-  Sensor_IO_Config();
-  M_Control_IO_config();        //motor controlling the initialization of IO
-  Set_Speed(Lpwm_val,Rpwm_val); //setting initialization of speed
-  lcd.clear();
+  InitLCD();
+  lcdCreateChar();
+  // motor controlling the initialization of IO
+  InitControl();
+  InitSensor();
+  // setting initialization of speed
+  setSpeedMotor(LPWM, RPWM);
   stopp();
 }
-int elasped = 0;
-int elasped_lineout = 0;
-int elasped_turn = 0;
-int elasped_back = 0;
 
-const int DELAY = 0;
-const int DELAY_OUT_LINE = 80; 
-const int DELAY_ROTATE = 20; 
-const int DELAY_BACK = 40; 
+int elasped_sensor = 0;
+int elasped_lineout = 0;
 
 bool TURN_BACK = false;
 
-int FIRST_SENSOR = 0;
+int COUNT_SENSOR = 0;
+int LOOP_STEP = 0;
+bool tag_sensor = false;
+
+
+long rotate_begin = 0;
+
+int LAP = 0;
+
+bool LOOP_TWO = false;
+bool sensor_middle = false;
+bool toggle_middle = false;
+
+char* raw = "L3-L2-L1-L1";
+int MISSION[4] = {3,2,1,1};
+
 void loop()
 {
-  Sensor_Scan();
-  int current = millis();
-  bool middle = SM == HIGH;
-  bool left = SL == HIGH;
-  bool right = SR == HIGH;
-  
-  if (current - elasped > DELAY) {
-    if (TURN_BACK) {
-      if (FIRST_SENSOR == 0) {
-        if (right) FIRST_SENSOR = 1;
-        if (left) FIRST_SENSOR = -1;
-      }
-      
-      if (FIRST_SENSOR != 0) {
-        reset_state();
-        if (FIRST_SENSOR < 0) {
-          turnL();
-        } else if (FIRST_SENSOR > 0) {
-          turnR();
-        }
-        int time_turn = millis();
-        if (elasped_turn == 0 ) elasped_turn = millis();
-        if (time_turn - elasped_turn > DELAY_ROTATE) {
-          Serial.println((String)"TURN_BACK: " + (time_turn - elasped_turn));
-          advance();
-          FIRST_SENSOR = 0;
-          TURN_BACK = false;
-          elasped_turn = 0;
-        }
-      } else {
-        if (old_left) {
-          turnL();
-        } else if (old_right) {
-          turnR();
-        } else {
-          back();
-        }
-      }
-    } else if (!middle && !left && !right) {
-      int elasped_line = millis();
-      if (elasped_lineout == 0 ) elasped_lineout = millis();
-      if (elasped_line - elasped_lineout < DELAY_OUT_LINE) {
-        if (old_left) {
-          Serial.println("turn left. old state");
-          rightside();
-        } else if (!old_right) {
-          Serial.println("turn right. old state");
+  SensorScan();
+  int sensor_milis = millis();
+  if (sensor_milis - elasped_sensor > DELAY) {
+    switch (SENSOR_STATE) {
+      case STOP:
+        stopp();
+        if (cSML || cSMR) setSensorState(FORWARD);
+        break;
+      case FORWARD:
+        if (!cSML && !cSMM && !cSMR) {
+          if (SENSOR_LAST == TURN_LEFT && oSMR) {
+            rightside();
+          } else if (SENSOR_LAST == TURN_LEFT && oSML && COUNT_SENSOR == 1) {
+            setSensorState(TURN_LEFT);
+            COUNT_SENSOR = 0;
+            LOOP_TWO = true;
+          }
+        } else if (!cSMR) {
           leftside();
+          SensorState();
+        } else if (!cSML) {
+          rightside();
+          SensorState();
         } else {
-          elasped_lineout = 0;
-          TURN_BACK = true;
+          going();
+          SensorState();
         }
-      } else {
-        elasped_lineout = 0;
-        TURN_BACK = true;
-      }
-    } else if (left && right) {
-      Serial.println("forward.");
-      advance();
-      saved_state();
-    } else if (left) {
-      Serial.println("right slide.");
-      rightside();
-      saved_state();
-    } else if (right) {
-      Serial.println("left slide.");
-      leftside();
-      saved_state();
+        
+        if (cSML && !tag_sensor && !LOOP_TWO) {
+          COUNT_SENSOR++;
+          tag_sensor = true;
+          if (COUNT_SENSOR == MISSION[LAP]) {
+            setSensorState(TURN_LEFT);
+            LAP++;
+            if (sizeof(MISSION) / 2 <= LAP) LAP = 0;
+          }
+        }
+        if (!cSML) tag_sensor = false;
+        break;
+      case TURN_LEFT:
+//        int elasped_turn = millis();
+//        if (rotate_begin == 0) rotate_begin = millis();
+//        if (elasped_turn - rotate_begin <= DELAY_TURN_LEFT && !(cSMM && cSMR & LOOP_TWO)) {
+//          turnR();
+//        } else {
+//          LOOP_TWO = false;
+//          COUNT_SENSOR = 0;
+//          rotate_begin = 0;
+//          setSensorState(FORWARD);
+//        }
+        break;
+      case TURN_RIGHT:
+
+        break;
+      case BACK:
+
+        break;
     }
-    
-    elasped = millis();
+
+    lcd.setCursor(0, 1); //showing from second row
+    lcd.print((String)" M:"+ (LAP+1) + " LAP:" + COUNT_SENSOR + "/" + MISSION[LAP]);
+    elasped_sensor = millis();
   }
 }
 
