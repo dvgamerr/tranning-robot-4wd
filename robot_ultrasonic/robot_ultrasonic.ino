@@ -2,35 +2,55 @@
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 15, 2);
 
-#define echoPin A1
-#define trigPin A0
-#define servoPin 11
+#define echoPin A3
+#define trigPin A2
+#define servoPin 3
 #define RATE_SONIC 58.65
-#define DELAY_SONIC 250
+#define DELAY_SONIC 50
 #define SERVO_CENTOR 1880
-int maxRange = 16;
+int maxRange = 21;
 int minRange = 2;
 unsigned long duration, distance;
 
 unsigned long elapsed = 0;
 
-int myangle = 60;
-
-void servopulse(int servopin, int myangle) //defining a function of pulse
+byte myangle = 360;
+byte angle_set = 0;
+void pulseServo(int pin, int pulsewidth) //defining a function of pulse
 {
-  const int adjust = 0;
-  int pulsewidth = ((myangle + adjust) * 11) + 500; //converting angle into pulse width value at 500-2480
-  digitalWrite(servopin, HIGH); //increasing the level of motor interface to upmost
-  delayMicroseconds(pulsewidth); //delaying microsecond of pulse width value
-  digitalWrite(servopin, LOW); //decreasing the level of motor interface to the least
-  delay(20 - pulsewidth / 1000);
-  Serial.println((String)"delay-" + (20 - pulsewidth / 1000));
+  digitalWrite(pin, HIGH);
+  delayMicroseconds(pulsewidth); // delaying microsecond of pulse width value 500 - 2480
+  digitalWrite(pin, LOW);
+  delay(32 - pulsewidth / 800);
 }
-void Set_servopulse(int set_val)
-{
-  for (int i = 0; i <= 20; i++) //giving motor enough time to turn to assigning point
-    Serial.println((String)"loop-"+i);
-    servopulse(servoPin, set_val); //invokimg pulse function
+void setServo(int angle) {
+  if (angle == myangle && angle_set < 3) {
+    double adjust;
+    Serial.print((String)"Angle: " + angle);
+    bool minus = false;
+    if (angle > 90) angle = 90;
+    if (angle < -90) angle = -90;
+    if (angle < 0) {
+      adjust = 7.45;
+      angle = angle * -1;
+      minus = true;
+    } else {
+      adjust = 8.25;
+    }
+    
+    double pulsewidth = angle * adjust;
+    if (!minus) {
+      pulsewidth = SERVO_CENTOR - pulsewidth;
+    } else {
+      pulsewidth = SERVO_CENTOR + pulsewidth;
+    }
+    Serial.println((String)" -- " + pulsewidth);
+    for (int i = 0; i < 5; i++) pulseServo(servoPin, (int)pulsewidth);
+    angle_set++;
+  } else if (angle != myangle) {
+    myangle = angle;
+    angle_set = 0;
+  }
 }
 
 void setup() {
@@ -42,30 +62,20 @@ void setup() {
 
 bool onetime = false;
 void loop() {
-  ultrasonic();
   unsigned long current = millis();
+  ultrasonic();
   if (current - elapsed > DELAY_SONIC) {
-    ultrasonic();
+    setServo(0);
     elapsed = millis();
   }
 }
 
-unsigned long se = 0;
-void setServo(int angle) {
-  bool toggle = false;
-  unsigned long sc = millis();
-  if (se == 0) se = millis();
-  if (sc - se < 200) {
- 
-  }
-}
 
-void servo(int angle) {
-  digitalWrite(servoPin, HIGH);
-  delayMicroseconds(SERVO_CENTOR);
-  digitalWrite(servoPin, LOW);
-  delay(50);
-}
+
+
+
+
+
 
 void led_begin() {
   lcd.init();
