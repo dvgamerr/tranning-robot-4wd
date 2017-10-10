@@ -85,7 +85,7 @@ bool LOOP_TWO = false;
 bool sensor_middle = false;
 bool toggle_middle = false;
 
-char* raw = "L3-L2-L1-L1";
+char* raw = "L3L2L1L1";
 int MISSION[4] = {3,2,1,1};
 
 void loop()
@@ -130,16 +130,15 @@ void loop()
         if (!cSML) tag_sensor = false;
         break;
       case TURN_LEFT:
-//        int elasped_turn = millis();
-//        if (rotate_begin == 0) rotate_begin = millis();
-//        if (elasped_turn - rotate_begin <= DELAY_TURN_LEFT && !(cSMM && cSMR & LOOP_TWO)) {
-//          turnR();
-//        } else {
-//          LOOP_TWO = false;
-//          COUNT_SENSOR = 0;
-//          rotate_begin = 0;
-//          setSensorState(FORWARD);
-//        }
+        if (rotate_begin == 0) rotate_begin = millis();
+        if (sensor_milis - rotate_begin <= DELAY_TURN_LEFT && !(cSMM && cSMR & LOOP_TWO)) {
+          turnR();
+        } else {
+          LOOP_TWO = false;
+          COUNT_SENSOR = 0;
+          rotate_begin = 0;
+          setSensorState(FORWARD);
+        }
         break;
       case TURN_RIGHT:
 
@@ -150,7 +149,7 @@ void loop()
     }
 
     lcd.setCursor(0, 1); //showing from second row
-    lcd.print((String)" M:"+ (LAP+1) + " LAP:" + COUNT_SENSOR + "/" + MISSION[LAP]);
+    lcd.print((String)"  M:"+ (LAP+1) + " LAP:" + COUNT_SENSOR + "/" + MISSION[LAP]);
     elasped_sensor = millis();
   }
 }
